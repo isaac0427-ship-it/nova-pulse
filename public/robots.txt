@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /diagnostic
+Disallow: /master
+Disallow: /arctic-air
+Disallow: /api
+Sitemap: https://nova-systems.app/sitemap.xml

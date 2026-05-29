@@ -1,36 +1,140 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nova Pulse
 
-## Getting Started
+**Operational Lead Accountability & Visibility Platform**
 
-First, run the development server:
+Track every lead that enters your business from first contact to final outcome. Stop losing revenue to missed calls, slow responses, and dead follow-ups.
 
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 15, React, TypeScript, Tailwind CSS |
+| Backend | Supabase (PostgreSQL + Auth + Realtime) |
+| State | Zustand |
+| Charts | Recharts |
+| Phone/SMS | Twilio |
+| Hosting | Vercel |
+
+---
+
+## Quick Start
+
+### 1. Install dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Set up environment variables
+```bash
+cp .env.local.example .env.local
+# Fill in your Supabase and Twilio credentials
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Set up the database
+1. Open your Supabase project → SQL Editor
+2. Run `supabase/migrations/001_initial_schema.sql`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Configure Twilio webhooks
+- Voice: `https://your-domain.com/api/webhooks/twilio/voice`
+- SMS: `https://your-domain.com/api/webhooks/twilio/sms`
 
-## Learn More
+### 5. Run development server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.tsx                    # Landing page
+│   ├── login/                      # Auth pages
+│   ├── signup/
+│   ├── forgot-password/
+│   ├── onboarding/                 # Business onboarding wizard
+│   ├── (app)/                      # Protected routes
+│   │   ├── dashboard/              # Main dashboard
+│   │   ├── leads/                  # Lead list + detail view
+│   │   ├── alerts/                 # Alert center
+│   │   ├── reports/                # Operational reports
+│   │   └── settings/              # Business settings
+│   └── api/
+│       ├── leads/                  # Lead CRUD API
+│       ├── alerts/                 # Alert management API
+│       ├── reports/                # Report generation API
+│       └── webhooks/twilio/        # Twilio inbound handlers
+├── components/
+│   ├── ui/                         # Base UI components
+│   ├── layout/                     # Logo, Sidebar, TopBar
+│   ├── dashboard/                  # Dashboard widgets
+│   └── leads/                      # Lead components + timeline
+├── hooks/                          # Data fetching hooks
+├── lib/                            # Supabase, Twilio, utilities
+├── store/                          # Zustand global state
+└── types/                          # TypeScript definitions
+```
+
+---
+
+## Database Tables
+
+| Table | Purpose |
+|---|---|
+| `businesses` | Business profile + hours + integrations |
+| `leads` | Core leads with status, timing, source |
+| `lead_events` | Immutable event log per lead |
+| `communications` | All calls, SMS, emails |
+| `alerts` | Operational issue alerts |
+| `reports` | Generated weekly/monthly reports |
+| `integrations` | Third-party integration config |
+
+---
+
+## Alert Engine
+
+| Alert | Trigger |
+|---|---|
+| Missed Call | Immediately on missed call |
+| No Response | 30 min with no contact |
+| Stalled Lead | 24 hours inactive |
+| Dead Lead | 72 hours, auto-marks ignored |
+
+---
+
+## Operational Health Score (0–100)
+
+Calculated from:
+- Missed call rate (−30 max)
+- Average response time penalty
+- Stalled lead rate (−20 max)
+
+---
+
+## Design Tokens
+
+| Token | Value |
+|---|---|
+| Background | `#080A0F` |
+| Surface | `#0D1017` |
+| Card | `#111520` |
+| Border | `#1C2235` |
+| Gold | `#C9A84C` |
+| Text | `#E8EAF0` |
+| Muted | `#5A6480` |
+| Font | Sora + DM Mono |
+
+---
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push to GitHub
+2. Import in Vercel
+3. Add all `.env.local` variables
+4. Deploy
