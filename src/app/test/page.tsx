@@ -31,10 +31,11 @@ function TestButton({
     try {
       const res = await fetch(endpoint, { method: "POST" });
       const data = await res.json();
+      const detail = JSON.stringify(data, null, 2);
       if (data.ok) {
-        setStatus({ ok: true, message: data.message || "Success", detail: JSON.stringify(data, null, 2) });
+        setStatus({ ok: true, message: data.message || "Success", detail });
       } else {
-        setStatus({ ok: false, message: data.error || "Unknown error" });
+        setStatus({ ok: false, message: data.error || "Failed", detail });
       }
     } catch (err) {
       setStatus({ ok: false, message: String(err) });
@@ -100,7 +101,8 @@ function TestButton({
           {status.detail && (
             <pre style={{
               marginTop: 8, fontFamily: "monospace", fontSize: 11,
-              color: MUT, whiteSpace: "pre-wrap", wordBreak: "break-all",
+              color: MUT, whiteSpace: "pre-wrap", wordBreak: "break-word",
+              maxHeight: 200, overflowY: "auto",
             }}>
               {status.detail}
             </pre>

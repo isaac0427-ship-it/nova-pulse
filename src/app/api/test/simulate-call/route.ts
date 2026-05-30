@@ -6,13 +6,27 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+function errMsg(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as Record<string, unknown>
+    if (e.message) return String(e.message)
+    if (e.details) return `${e.code}: ${e.details}`
+    return JSON.stringify(err)
+  }
+  return String(err)
+}
+
 export async function POST() {
   try {
-    const { data: client } = await supabase
+    const { data: client, error: clientErr } = await supabase
       .from('clients')
       .select('id, name')
       .limit(1)
       .single()
+
+    if (clientErr) {
+      return NextResponse.json({ ok: false, error: `clients fetch: ${errMsg(clientErr)}` }, { status: 500 })
+    }
 
     const fakePhone = `+1203555${Math.floor(1000 + Math.random() * 9000)}`
     const fakeSid = `CAtest${Date.now()}`
@@ -20,7 +34,7 @@ export async function POST() {
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        client_id: client?.id || null,
+        client_id: client?.id ?? null,
         source: 'phone',
         status: 'new',
         contact_phone: fakePhone,
@@ -30,10 +44,12 @@ export async function POST() {
       .select()
       .single()
 
-    if (leadErr) throw leadErr
+    if (leadErr) {
+      return NextResponse.json({ ok: false, error: `leads insert: ${errMsg(leadErr)}`, hint: leadErr }, { status: 500 })
+    }
 
     const { error: callErr } = await supabase.from('calls').insert({
-      client_id: client?.id || null,
+      client_id: client?.id ?? null,
       lead_id: lead.id,
       twilio_call_sid: fakeSid,
       direction: 'inbound',
@@ -44,16 +60,18 @@ export async function POST() {
       called_at: new Date().toISOString()
     })
 
-    if (callErr) throw callErr
+    if (callErr) {
+      return NextResponse.json({ ok: false, error: `calls insert: ${errMsg(callErr)}`, hint: callErr }, { status: 500 })
+    }
 
     return NextResponse.json({
       ok: true,
-      message: `✅ Lead created | Call logged | Check dashboard`,
+      message: '✅ Lead created | Call logged | Check dashboard',
       lead_id: lead.id,
       phone: fakePhone,
-      client: client?.name || 'No client found'
+      client: client?.name ?? 'No client found'
     })
   } catch (err) {
-    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
+    return NextResponse.json({ ok: false, error: errMsg(err) }, { status: 500 })
   }
 }
