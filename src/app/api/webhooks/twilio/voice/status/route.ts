@@ -14,61 +14,58 @@ const twilioClient = twilio(
 
 export async function POST(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url)
+    const leadId = searchParams.get('lead_id')
+    const clientId = searchParams.get('client_id')
+
     const body = await req.formData()
-    const callSid = body.get('CallSid') as string
     const dialStatus = body.get('DialCallStatus') as string
     const duration = parseInt(body.get('DialCallDuration') as string || '0')
+    const from = body.get('From') as string
 
     const missed = ['no-answer', 'busy', 'failed', 'canceled'].includes(dialStatus)
 
-    const { data: call } = await supabase
-      .from('calls')
-      .update({
-        status: missed ? 'missed' : 'completed',
-        duration_seconds: duration
-      })
-      .eq('twilio_call_sid', callSid)
-      .select('client_id, lead_id, from_number')
-      .single()
+    if (leadId) {
+      await supabase
+        .from('leads')
+        .update({
+          status: missed ? 'new' : 'contacted',
+          first_contact_at: missed ? null : new Date().toISOString(),
+          response_time_seconds: missed ? null : duration
+        })
+        .eq('id', leadId)
+    }
 
-    if (!call) return new NextResponse('ok')
-
-    await supabase
-      .from('leads')
-      .update({
-        status: missed ? 'new' : 'contacted',
-        first_contact_at: missed ? null : new Date().toISOString(),
-        response_time_minutes: missed ? null : Math.round(duration / 60)
-      })
-      .eq('id', call.lead_id)
-
-    if (missed) {
+    if (missed && clientId) {
       await supabase.from('alerts').insert({
-        client_id: call.client_id,
-        lead_id: call.lead_id,
+        business_id: clientId,
+        lead_id: leadId || null,
         type: 'missed_call',
         severity: 'high',
-        message: `Missed call from ${call.from_number}`
+        title: 'Missed Call',
+        description: `Missed call from ${from}`,
+        is_read: false,
+        is_resolved: false
       })
 
       const { data: client } = await supabase
         .from('clients')
-        .select('name, notify_phone, forwarding_phone')
-        .eq('id', call.client_id)
+        .select('name, forwarding_phone')
+        .eq('id', clientId)
         .single()
 
       if (client?.forwarding_phone) {
         await twilioClient.messages.create({
           to: client.forwarding_phone,
           from: process.env.TWILIO_PHONE_NUMBER!,
-          body: `📞 You missed a call from ${call.from_number}. This lead was tracked by Nova Systems. Call them back now: ${call.from_number}`
+          body: `📞 You missed a call from ${from}. This lead was tracked by Nova Systems. Call them back now: ${from}`
         })
       }
 
       await twilioClient.messages.create({
         to: '+12037060504',
         from: process.env.TWILIO_PHONE_NUMBER!,
-        body: `⚠️ NOVA ALERT: ${client?.name || 'A client'} missed a call from ${call.from_number}. Dashboard: https://nova-systems.app`
+        body: `⚠️ NOVA ALERT: ${client?.name || 'A client'} missed a call from ${from}. Dashboard: https://nova-systems.app`
       })
     }
 

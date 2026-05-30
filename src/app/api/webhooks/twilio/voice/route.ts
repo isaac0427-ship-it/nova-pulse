@@ -25,31 +25,25 @@ export async function POST(req: NextRequest) {
     const { data: lead } = await supabase
       .from('leads')
       .insert({
-        client_id: clientId,
+        business_id: clientId,
         source: 'phone',
         status: 'new',
-        contact_phone: from,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { call_sid: callSid, to_number: to }
+        phone: from,
       })
       .select()
       .single()
 
+    // calls table only has: id, client_id, created_at, transcript
     await supabase.from('calls').insert({
       client_id: clientId,
-      lead_id: lead?.id,
-      twilio_call_sid: callSid,
-      direction: 'inbound',
-      from_number: from,
-      to_number: to,
-      status: 'in-progress',
-      called_at: new Date().toISOString()
+      transcript: JSON.stringify({ call_sid: callSid, from_number: from, to_number: to, direction: 'inbound', lead_id: lead?.id })
     })
 
+    const leadId = lead?.id ?? ''
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial callerId="${to}" timeout="20"
-        action="https://nova-systems.app/api/webhooks/twilio/voice/status"
+        action="https://nova-systems.app/api/webhooks/twilio/voice/status?lead_id=${leadId}&client_id=${clientId}"
         method="POST">
     <Number>${forwardTo}</Number>
   </Dial>

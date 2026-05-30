@@ -35,12 +35,10 @@ export async function POST() {
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        client_id: client?.id ?? null,
+        business_id: client?.id ?? null,
         source: 'sms',
         status: 'new',
-        contact_phone: fakePhone,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { message_sid: fakeSid, test: true }
+        phone: fakePhone,
       })
       .select()
       .single()
@@ -49,6 +47,7 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: `leads insert: ${errMsg(leadErr)}`, hint: leadErr }, { status: 500 })
     }
 
+    // sms_messages columns: client_id, lead_id, from_number, to_number, body, direction, status, sent_at, created_at
     const { error: smsErr } = await supabase.from('sms_messages').insert({
       client_id: client?.id ?? null,
       lead_id: lead.id,
@@ -56,8 +55,8 @@ export async function POST() {
       to_number: '+19789136892',
       body: fakeBody,
       direction: 'inbound',
-      message_sid: fakeSid,
-      received_at: new Date().toISOString()
+      status: 'received',
+      sent_at: new Date().toISOString()
     })
 
     if (smsErr) {

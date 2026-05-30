@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
     const from = body.get('From') as string
     const to = body.get('To') as string
     const messageBody = (body.get('Body') as string) || ''
-    const messageSid = body.get('MessageSid') as string
 
     const { data: client } = await supabase
       .from('clients')
@@ -31,25 +30,23 @@ export async function POST(req: NextRequest) {
     const { data: lead } = await supabase
       .from('leads')
       .insert({
-        client_id: clientId,
+        business_id: clientId,
         source: 'sms',
         status: 'new',
-        contact_phone: from,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { message_sid: messageSid, to_number: to }
+        phone: from,
       })
       .select()
       .single()
 
     await supabase.from('sms_messages').insert({
       client_id: clientId,
-      lead_id: lead?.id,
+      lead_id: lead?.id || null,
       from_number: from,
       to_number: to,
       body: messageBody.slice(0, 1600),
       direction: 'inbound',
-      message_sid: messageSid,
-      received_at: new Date().toISOString()
+      status: 'received',
+      sent_at: new Date().toISOString()
     })
 
     await Promise.allSettled([

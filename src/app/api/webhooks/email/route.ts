@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
     const bodyText = data.text || data.plain || data.body || ''
     const toAddress = data.to || ''
 
-    // Find client by their tracking email
     const { data: client } = await supabase
       .from('clients')
       .select('id, name, email, forwarding_email, avg_customer_value')
@@ -40,22 +39,24 @@ export async function POST(req: NextRequest) {
     const { data: lead } = await supabase
       .from('leads')
       .insert({
-        client_id: clientId,
+        business_id: clientId,
         source: 'email',
         status: 'new',
-        contact_email: senderEmail,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { subject, to: toAddress, preview: bodyText.slice(0, 200) }
+        email: senderEmail,
+        notes: `Subject: ${subject}\n\n${bodyText.slice(0, 500)}`
       })
       .select()
       .single()
 
     await supabase.from('alerts').insert({
-      client_id: clientId,
-      lead_id: lead?.id,
+      business_id: clientId,
+      lead_id: lead?.id || null,
       type: 'email_lead',
       severity: 'medium',
-      message: `New email lead from ${senderEmail}: "${subject}"`
+      title: 'New Email Lead',
+      description: `From ${senderEmail}: "${subject}"`,
+      is_read: false,
+      is_resolved: false
     })
 
     const emailBody = `

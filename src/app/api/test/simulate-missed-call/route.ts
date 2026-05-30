@@ -40,12 +40,10 @@ export async function POST() {
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        client_id: client?.id ?? null,
+        business_id: client?.id ?? null,
         source: 'phone',
         status: 'new',
-        contact_phone: fakePhone,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { call_sid: fakeSid, test: true, missed: true }
+        phone: fakePhone,
       })
       .select()
       .single()
@@ -56,14 +54,7 @@ export async function POST() {
 
     const { error: callErr } = await supabase.from('calls').insert({
       client_id: client?.id ?? null,
-      lead_id: lead.id,
-      twilio_call_sid: fakeSid,
-      direction: 'inbound',
-      from_number: fakePhone,
-      to_number: '+19789136892',
-      status: 'missed',
-      duration_seconds: 0,
-      called_at: new Date().toISOString()
+      transcript: JSON.stringify({ call_sid: fakeSid, from_number: fakePhone, to_number: '+19789136892', direction: 'inbound', status: 'missed', lead_id: lead.id, test: true })
     })
 
     if (callErr) {
@@ -71,11 +62,14 @@ export async function POST() {
     }
 
     const { error: alertErr } = await supabase.from('alerts').insert({
-      client_id: client?.id ?? null,
+      business_id: client?.id ?? null,
       lead_id: lead.id,
       type: 'missed_call',
       severity: 'high',
-      message: `TEST: Missed call from ${fakePhone}`
+      title: 'Missed Call',
+      description: `TEST: Missed call from ${fakePhone}`,
+      is_read: false,
+      is_resolved: false
     })
 
     if (alertErr) {

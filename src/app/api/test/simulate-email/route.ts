@@ -38,12 +38,11 @@ export async function POST() {
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        client_id: client?.id ?? null,
+        business_id: client?.id ?? null,
         source: 'email',
         status: 'new',
-        contact_email: fakeEmail,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { subject: fakeSubject, test: true }
+        email: fakeEmail,
+        notes: `Subject: ${fakeSubject}\n\n${fakeBody}`
       })
       .select()
       .single()
@@ -52,12 +51,16 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: `leads insert: ${errMsg(leadErr)}`, hint: leadErr }, { status: 500 })
     }
 
+    // alerts columns: business_id, lead_id, type, severity, title, description, is_read, is_resolved
     const { error: alertErr } = await supabase.from('alerts').insert({
-      client_id: client?.id ?? null,
+      business_id: client?.id ?? null,
       lead_id: lead.id,
       type: 'email_lead',
       severity: 'medium',
-      message: `Test email lead from ${fakeEmail}: "${fakeSubject}"`
+      title: 'New Email Lead',
+      description: `Test email from ${fakeEmail}: "${fakeSubject}"`,
+      is_read: false,
+      is_resolved: false
     })
 
     if (alertErr) {

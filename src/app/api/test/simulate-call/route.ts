@@ -34,12 +34,10 @@ export async function POST() {
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        client_id: client?.id ?? null,
+        business_id: client?.id ?? null,
         source: 'phone',
         status: 'new',
-        contact_phone: fakePhone,
-        lead_in_at: new Date().toISOString(),
-        raw_data: { call_sid: fakeSid, test: true }
+        phone: fakePhone,
       })
       .select()
       .single()
@@ -48,16 +46,10 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: `leads insert: ${errMsg(leadErr)}`, hint: leadErr }, { status: 500 })
     }
 
+    // calls table only has: id, client_id, created_at, transcript
     const { error: callErr } = await supabase.from('calls').insert({
       client_id: client?.id ?? null,
-      lead_id: lead.id,
-      twilio_call_sid: fakeSid,
-      direction: 'inbound',
-      from_number: fakePhone,
-      to_number: '+19789136892',
-      status: 'completed',
-      duration_seconds: 142,
-      called_at: new Date().toISOString()
+      transcript: JSON.stringify({ call_sid: fakeSid, from_number: fakePhone, to_number: '+19789136892', direction: 'inbound', status: 'completed', duration_seconds: 142, lead_id: lead.id, test: true })
     })
 
     if (callErr) {
