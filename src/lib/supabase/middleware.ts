@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/" || pathname === "/login" || pathname === "/diagnostic") return true;
+  // Test panel — public, password-protected on the page itself
+  if (pathname === "/test" || pathname.startsWith("/test/")) return true;
+  if (pathname.startsWith("/api/test/")) return true;
   if (pathname.startsWith("/api/webhooks/")) return true;
+  if (pathname.startsWith("/api/reports/")) return true;
   if (pathname.startsWith("/api/diagnostic")) return true;
   if (pathname.startsWith("/_next/")) return true;
   if (pathname === "/sitemap.xml" || pathname === "/robots.txt" || pathname === "/manifest.json") return true;
