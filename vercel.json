@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/dead-leads",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/reports/weekly",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

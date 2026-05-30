@@ -1,85 +1,83 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { validateTwilioSignature, getTwilioClient } from "@/lib/twilio";
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import twilio from 'twilio'
 
-function db() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-const EMPTY_XML = `<?xml version="1.0" encoding="UTF-8"?><Response/>`;
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204 });
-}
+const twilioClient = twilio(
+  process.env.TWILIO_ACCOUNT_SID!,
+  process.env.TWILIO_AUTH_TOKEN!
+)
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
-  const params = Object.fromEntries(new URLSearchParams(body));
-
-  const signature = req.headers.get("x-twilio-signature") ?? "";
-  if (!validateTwilioSignature(signature, req.url, params)) {
-    return new NextResponse("Forbidden", { status: 403 });
-  }
-
-  const callSid = params.CallSid as string;
-  const dialStatus = params.DialCallStatus as string;
-  const duration = parseInt(params.DialCallDuration ?? "0", 10);
-  const missed = ["no-answer", "busy", "failed", "canceled"].includes(dialStatus);
-
   try {
-    const supabase = db();
+    const body = await req.formData()
+    const callSid = body.get('CallSid') as string
+    const dialStatus = body.get('DialCallStatus') as string
+    const duration = parseInt(body.get('DialCallDuration') as string || '0')
 
-    const { data: comm } = await supabase
-      .from("communications")
-      .update({ status: missed ? "missed" : "completed", duration_seconds: duration })
-      .eq("external_id", callSid)
-      .select("business_id, lead_id, from_number")
-      .single();
+    const missed = ['no-answer', 'busy', 'failed', 'canceled'].includes(dialStatus)
 
-    if (missed && comm) {
-      await supabase.from("leads").update({ status: "new" }).eq("id", comm.lead_id);
+    const { data: call } = await supabase
+      .from('calls')
+      .update({
+        status: missed ? 'missed' : 'completed',
+        duration_seconds: duration
+      })
+      .eq('twilio_call_sid', callSid)
+      .select('client_id, lead_id, from_number')
+      .single()
 
-      await supabase.from("alerts").insert({
-        business_id: comm.business_id,
-        lead_id: comm.lead_id,
-        type: "missed_call",
-        severity: "critical",
-        title: "Missed Call",
-        description: `Missed call from ${comm.from_number}. No callback sent yet.`,
-        is_read: false,
-        is_resolved: false,
-      });
+    if (!call) return new NextResponse('ok')
 
-      await supabase.from("lead_events").insert({
-        lead_id: comm.lead_id,
-        business_id: comm.business_id,
-        type: "missed_call",
-        title: "Missed Call",
-        description: `Call from ${comm.from_number} was not answered`,
-        metadata: { call_sid: callSid, dial_status: dialStatus },
-      });
+    await supabase
+      .from('leads')
+      .update({
+        status: missed ? 'new' : 'contacted',
+        first_contact_at: missed ? null : new Date().toISOString(),
+        response_time_minutes: missed ? null : Math.round(duration / 60)
+      })
+      .eq('id', call.lead_id)
 
-      const { data: business } = await supabase
-        .from("businesses")
-        .select("notify_phone, name")
-        .eq("id", comm.business_id)
-        .single();
+    if (missed) {
+      await supabase.from('alerts').insert({
+        client_id: call.client_id,
+        lead_id: call.lead_id,
+        type: 'missed_call',
+        severity: 'high',
+        message: `Missed call from ${call.from_number}`
+      })
 
-      if (business?.notify_phone) {
-        const twilio = getTwilioClient();
-        await twilio.messages.create({
-          to: business.notify_phone,
+      const { data: client } = await supabase
+        .from('clients')
+        .select('name, notify_phone, forwarding_phone')
+        .eq('id', call.client_id)
+        .single()
+
+      if (client?.forwarding_phone) {
+        await twilioClient.messages.create({
+          to: client.forwarding_phone,
           from: process.env.TWILIO_PHONE_NUMBER!,
-          body: `⚠️ NOVA: Missed call from ${comm.from_number} for ${business.name}. Log in: https://nova-systems.app`,
-        });
+          body: `📞 You missed a call from ${call.from_number}. This lead was tracked by Nova Systems. Call them back now: ${call.from_number}`
+        })
       }
+
+      await twilioClient.messages.create({
+        to: '+12037060504',
+        from: process.env.TWILIO_PHONE_NUMBER!,
+        body: `⚠️ NOVA ALERT: ${client?.name || 'A client'} missed a call from ${call.from_number}. Dashboard: https://nova-systems.app`
+      })
     }
-  } catch {
-    // Silent — webhook must return 200
+
+  } catch (err) {
+    console.error('Status error:', err)
   }
 
-  return new NextResponse(EMPTY_XML, { headers: { "Content-Type": "text/xml" } });
+  return new NextResponse(
+    '<?xml version="1.0" encoding="UTF-8"?><Response/>',
+    { headers: { 'Content-Type': 'text/xml' } }
+  )
 }
