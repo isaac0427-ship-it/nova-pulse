@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const { data: business } = await supabase
       .from('businesses')
-      .select('id, name, forwarding_phone, notify_phone')
+      .select('id, name, phone')
       .eq('twilio_number', to)
       .single()
 
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
         from: to,
         body: `Thanks for reaching out! We'll get back to you shortly.`
       }),
-      business?.forwarding_phone
+      business?.phone
         ? twilioClient.messages.create({
-            to: business.forwarding_phone,
+            to: business.phone,
             from: process.env.TWILIO_PHONE_NUMBER!,
             body: `📱 NOVA: New text from ${from}: "${messageBody.slice(0, 100)}"`
           })

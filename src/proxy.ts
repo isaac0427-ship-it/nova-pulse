@@ -10,8 +10,11 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/test' ||
     pathname.startsWith('/test/') ||
+    pathname === '/apex-test' ||
+    pathname.startsWith('/apex-test/') ||
     pathname.startsWith('/api/test') ||
     pathname.startsWith('/api/webhooks') ||
+    pathname.startsWith('/api/leads/capture') ||
     pathname.startsWith('/api/reports') ||
     pathname.startsWith('/api/cron') ||
     pathname.startsWith('/_next') ||
@@ -54,6 +57,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|images|api/webhooks|api/test|api/reports|api/cron).*)',
+    '/((?!_next/static|_next/image|favicon.ico|images|api/webhooks|api/test|api/reports|api/cron|api/leads/capture).*)',
   ]
 }

@@ -15,11 +15,11 @@ export async function POST(req: NextRequest) {
 
     const { data: business } = await supabase
       .from('businesses')
-      .select('id, name, forwarding_phone, notify_phone')
+      .select('id, name, phone, email')
       .eq('twilio_number', to)
       .single()
 
-    const forwardTo = business?.forwarding_phone || '+12037060504'
+    const forwardTo = business?.phone || '+12037060504'
     const businessId = business?.id || null
 
     const { data: lead } = await supabase

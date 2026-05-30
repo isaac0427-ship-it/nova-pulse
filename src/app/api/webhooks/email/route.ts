@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     const { data: business } = await supabase
       .from('businesses')
-      .select('id, name, email, forwarding_phone')
+      .select('id, name, email')
       .eq('twilio_number', toAddress)
       .single()
 

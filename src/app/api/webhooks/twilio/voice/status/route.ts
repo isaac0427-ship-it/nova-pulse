@@ -50,13 +50,13 @@ export async function POST(req: NextRequest) {
 
       const { data: business } = await supabase
         .from('businesses')
-        .select('name, forwarding_phone, notify_phone')
+        .select('name, phone')
         .eq('id', businessId)
         .single()
 
-      if (business?.forwarding_phone) {
+      if (business?.phone) {
         await twilioClient.messages.create({
-          to: business.forwarding_phone,
+          to: business.phone,
           from: process.env.TWILIO_PHONE_NUMBER!,
           body: `📞 You missed a call from ${from}. This lead was tracked by Nova Systems. Call them back now: ${from}`
         })

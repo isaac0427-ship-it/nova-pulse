@@ -204,6 +204,32 @@ export default function TestPage() {
           endpoint="/api/reports/weekly"
         />
 
+        <div style={{ fontFamily: INTER, fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: G, marginBottom: 16, marginTop: 32 }}>
+          FORM TRACKING
+        </div>
+        <div style={{ background: CARD, border: `1px solid ${BD}`, padding: "24px 28px", marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+            <div>
+              <div style={{ fontFamily: INTER, fontSize: 14, fontWeight: 700, color: TXT, marginBottom: 4 }}>Open Lead Capture Form</div>
+              <div style={{ fontFamily: INTER, fontSize: 12, color: MUT }}>Opens the Apex Roofing & Repair form page. Submit it to fire a real lead + SMS + email to Isaac.</div>
+            </div>
+            <a
+              href="https://nova-systems.app/apex-test"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: G, color: BG, border: "none", padding: "10px 24px",
+                fontFamily: INTER, fontSize: 12, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase", cursor: "pointer", borderRadius: 4,
+                flexShrink: 0, display: "flex", alignItems: "center", gap: 8,
+                minWidth: 120, justifyContent: "center", textDecoration: "none",
+              }}
+            >
+              Open Form ↗
+            </a>
+          </div>
+        </div>
+
         <div style={{ marginTop: 48, borderTop: `1px solid ${BD}`, paddingTop: 24, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontFamily: INTER, fontSize: 11, color: "#2A2A2A", letterSpacing: "0.1em", textTransform: "uppercase" }}>
             NOVA SYSTEMS INTERNAL
