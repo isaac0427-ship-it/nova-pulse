@@ -28,18 +28,18 @@ export async function POST(req: NextRequest) {
     const bodyText = data.text || data.plain || data.body || ''
     const toAddress = data.to || ''
 
-    const { data: client } = await supabase
-      .from('clients')
-      .select('id, name, email, forwarding_email, avg_customer_value')
-      .eq('forwarding_email', toAddress)
+    const { data: business } = await supabase
+      .from('businesses')
+      .select('id, name, email, forwarding_phone')
+      .eq('twilio_number', toAddress)
       .single()
 
-    const clientId = client?.id || null
+    const businessId = business?.id || null
 
     const { data: lead } = await supabase
       .from('leads')
       .insert({
-        business_id: clientId,
+        business_id: businessId,
         source: 'email',
         status: 'new',
         email: senderEmail,
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     await supabase.from('alerts').insert({
-      business_id: clientId,
+      business_id: businessId,
       lead_id: lead?.id || null,
       type: 'email_lead',
       severity: 'medium',
@@ -70,10 +70,10 @@ export async function POST(req: NextRequest) {
       </div>`
 
     await Promise.allSettled([
-      client?.email
+      business?.email
         ? resend.emails.send({
             from: 'Nova Systems <noreply@nova-systems.app>',
-            to: client.email,
+            to: business.email,
             subject: `NOVA: New email lead — ${subject}`,
             html: emailBody
           })
@@ -81,10 +81,10 @@ export async function POST(req: NextRequest) {
       resend.emails.send({
         from: 'Nova Systems <noreply@nova-systems.app>',
         to: 'isaac_0427@icloud.com',
-        subject: `NOVA: New email lead${client ? ` for ${client.name}` : ''} — ${subject}`,
+        subject: `NOVA: New email lead${business ? ` for ${business.name}` : ''} — ${subject}`,
         html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
           <h2 style="color:#C6A15B;">New Email Lead</h2>
-          ${client ? `<p><strong>Client:</strong> ${client.name}</p>` : ''}
+          ${business ? `<p><strong>Client:</strong> ${business.name}</p>` : ''}
           <p><strong>From:</strong> ${senderEmail}</p>
           <p><strong>Subject:</strong> ${subject}</p>
           <hr/>

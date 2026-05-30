@@ -12,6 +12,8 @@ const twilioClient = twilio(
   process.env.TWILIO_AUTH_TOKEN!
 )
 
+const TEST_BUSINESS_ID = '915819ad-4189-4809-a1d3-71f4d71f426a'
+
 function errMsg(err: unknown): string {
   if (err && typeof err === 'object') {
     const e = err as Record<string, unknown>
@@ -24,23 +26,13 @@ function errMsg(err: unknown): string {
 
 export async function POST() {
   try {
-    const { data: client, error: clientErr } = await supabase
-      .from('clients')
-      .select('id, name')
-      .limit(1)
-      .single()
-
-    if (clientErr) {
-      return NextResponse.json({ ok: false, error: `clients fetch: ${errMsg(clientErr)}` }, { status: 500 })
-    }
-
     const fakePhone = `+1203555${Math.floor(1000 + Math.random() * 9000)}`
     const fakeSid = `CAtest_missed_${Date.now()}`
 
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        business_id: client?.id ?? null,
+        business_id: TEST_BUSINESS_ID,
         source: 'phone',
         status: 'new',
         phone: fakePhone,
@@ -53,7 +45,7 @@ export async function POST() {
     }
 
     const { error: callErr } = await supabase.from('calls').insert({
-      client_id: client?.id ?? null,
+      client_id: TEST_BUSINESS_ID,
       transcript: JSON.stringify({ call_sid: fakeSid, from_number: fakePhone, to_number: '+19789136892', direction: 'inbound', status: 'missed', lead_id: lead.id, test: true })
     })
 
@@ -62,7 +54,7 @@ export async function POST() {
     }
 
     const { error: alertErr } = await supabase.from('alerts').insert({
-      business_id: client?.id ?? null,
+      business_id: TEST_BUSINESS_ID,
       lead_id: lead.id,
       type: 'missed_call',
       severity: 'high',
@@ -79,7 +71,7 @@ export async function POST() {
     await twilioClient.messages.create({
       to: '+12037060504',
       from: process.env.TWILIO_PHONE_NUMBER!,
-      body: `⚠️ NOVA TEST ALERT: ${client?.name ?? 'A client'} missed a call from ${fakePhone}. Dashboard: https://nova-systems.app`
+      body: `⚠️ NOVA TEST ALERT: Arctic Air HVAC missed a call from ${fakePhone}. Dashboard: https://nova-systems.app`
     })
 
     return NextResponse.json({
@@ -87,7 +79,7 @@ export async function POST() {
       message: '✅ Alert created | SMS sent to Isaac',
       lead_id: lead.id,
       phone: fakePhone,
-      client: client?.name ?? 'No client found'
+      business_id: TEST_BUSINESS_ID
     })
   } catch (err) {
     return NextResponse.json({ ok: false, error: errMsg(err) }, { status: 500 })

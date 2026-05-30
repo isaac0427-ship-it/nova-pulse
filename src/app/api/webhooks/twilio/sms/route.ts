@@ -19,18 +19,18 @@ export async function POST(req: NextRequest) {
     const to = body.get('To') as string
     const messageBody = (body.get('Body') as string) || ''
 
-    const { data: client } = await supabase
-      .from('clients')
+    const { data: business } = await supabase
+      .from('businesses')
       .select('id, name, forwarding_phone, notify_phone')
       .eq('twilio_number', to)
       .single()
 
-    const clientId = client?.id || null
+    const businessId = business?.id || null
 
     const { data: lead } = await supabase
       .from('leads')
       .insert({
-        business_id: clientId,
+        business_id: businessId,
         source: 'sms',
         status: 'new',
         phone: from,
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     await supabase.from('sms_messages').insert({
-      client_id: clientId,
+      client_id: businessId,
       lead_id: lead?.id || null,
       from_number: from,
       to_number: to,
@@ -55,9 +55,9 @@ export async function POST(req: NextRequest) {
         from: to,
         body: `Thanks for reaching out! We'll get back to you shortly.`
       }),
-      client?.forwarding_phone
+      business?.forwarding_phone
         ? twilioClient.messages.create({
-            to: client.forwarding_phone,
+            to: business.forwarding_phone,
             from: process.env.TWILIO_PHONE_NUMBER!,
             body: `📱 NOVA: New text from ${from}: "${messageBody.slice(0, 100)}"`
           })
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       twilioClient.messages.create({
         to: '+12037060504',
         from: process.env.TWILIO_PHONE_NUMBER!,
-        body: `📱 NOVA: ${client?.name || 'A client'} got a text from ${from}: "${messageBody.slice(0, 100)}"`
+        body: `📱 NOVA: ${business?.name || 'A client'} got a text from ${from}: "${messageBody.slice(0, 100)}"`
       })
     ])
 

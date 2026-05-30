@@ -6,6 +6,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
+const TEST_BUSINESS_ID = '915819ad-4189-4809-a1d3-71f4d71f426a'
+
 function errMsg(err: unknown): string {
   if (err && typeof err === 'object') {
     const e = err as Record<string, unknown>
@@ -18,24 +20,13 @@ function errMsg(err: unknown): string {
 
 export async function POST() {
   try {
-    const { data: client, error: clientErr } = await supabase
-      .from('clients')
-      .select('id, name')
-      .limit(1)
-      .single()
-
-    if (clientErr) {
-      return NextResponse.json({ ok: false, error: `clients fetch: ${errMsg(clientErr)}` }, { status: 500 })
-    }
-
     const fakePhone = `+1203555${Math.floor(1000 + Math.random() * 9000)}`
-    const fakeSid = `SMtest${Date.now()}`
     const fakeBody = 'Hi, I saw your ad and wanted to get a quote for my HVAC system.'
 
     const { data: lead, error: leadErr } = await supabase
       .from('leads')
       .insert({
-        business_id: client?.id ?? null,
+        business_id: TEST_BUSINESS_ID,
         source: 'sms',
         status: 'new',
         phone: fakePhone,
@@ -47,9 +38,8 @@ export async function POST() {
       return NextResponse.json({ ok: false, error: `leads insert: ${errMsg(leadErr)}`, hint: leadErr }, { status: 500 })
     }
 
-    // sms_messages columns: client_id, lead_id, from_number, to_number, body, direction, status, sent_at, created_at
     const { error: smsErr } = await supabase.from('sms_messages').insert({
-      client_id: client?.id ?? null,
+      client_id: TEST_BUSINESS_ID,
       lead_id: lead.id,
       from_number: fakePhone,
       to_number: '+19789136892',
@@ -68,7 +58,7 @@ export async function POST() {
       message: '✅ SMS lead created | Check dashboard',
       lead_id: lead.id,
       phone: fakePhone,
-      client: client?.name ?? 'No client found'
+      business_id: TEST_BUSINESS_ID
     })
   } catch (err) {
     return NextResponse.json({ ok: false, error: errMsg(err) }, { status: 500 })

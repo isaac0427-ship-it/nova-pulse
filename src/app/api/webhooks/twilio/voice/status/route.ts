@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const leadId = searchParams.get('lead_id')
-    const clientId = searchParams.get('client_id')
+    const businessId = searchParams.get('business_id')
 
     const body = await req.formData()
     const dialStatus = body.get('DialCallStatus') as string
@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
         .eq('id', leadId)
     }
 
-    if (missed && clientId) {
+    if (missed && businessId) {
       await supabase.from('alerts').insert({
-        business_id: clientId,
+        business_id: businessId,
         lead_id: leadId || null,
         type: 'missed_call',
         severity: 'high',
@@ -48,15 +48,15 @@ export async function POST(req: NextRequest) {
         is_resolved: false
       })
 
-      const { data: client } = await supabase
-        .from('clients')
-        .select('name, forwarding_phone')
-        .eq('id', clientId)
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('name, forwarding_phone, notify_phone')
+        .eq('id', businessId)
         .single()
 
-      if (client?.forwarding_phone) {
+      if (business?.forwarding_phone) {
         await twilioClient.messages.create({
-          to: client.forwarding_phone,
+          to: business.forwarding_phone,
           from: process.env.TWILIO_PHONE_NUMBER!,
           body: `📞 You missed a call from ${from}. This lead was tracked by Nova Systems. Call them back now: ${from}`
         })
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       await twilioClient.messages.create({
         to: '+12037060504',
         from: process.env.TWILIO_PHONE_NUMBER!,
-        body: `⚠️ NOVA ALERT: ${client?.name || 'A client'} missed a call from ${from}. Dashboard: https://nova-systems.app`
+        body: `⚠️ NOVA ALERT: ${business?.name || 'A client'} missed a call from ${from}. Dashboard: https://nova-systems.app`
       })
     }
 
