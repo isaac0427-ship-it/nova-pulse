@@ -1,45 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const FALLBACK_TWIML = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial timeout="20">
+    <Number>+12037060504</Number>
+  </Dial>
+</Response>`
+
+function twimlResponse(xml: string) {
+  return new NextResponse(xml, { status: 200, headers: { 'Content-Type': 'text/xml' } })
+}
 
 export async function POST(req: NextRequest) {
+  // Always return valid TwiML — never let this crash
   try {
     const body = await req.formData()
     const callSid = body.get('CallSid') as string
     const from = body.get('From') as string
     const to = body.get('To') as string
 
-    const { data: business } = await supabase
-      .from('businesses')
-      .select('id, name, phone, email')
-      .eq('twilio_number', to)
-      .single()
+    console.log('[voice] incoming call:', { callSid, from, to })
 
-    const forwardTo = business?.phone || '+12037060504'
-    const businessId = business?.id || null
+    // Init Supabase inside handler — missing env vars crash module-level init
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
-    const { data: lead } = await supabase
-      .from('leads')
-      .insert({
-        business_id: businessId,
-        source: 'phone',
-        status: 'new',
-        phone: from,
+    let forwardTo = '+12037060504'
+    let businessId: string | null = null
+    let leadId = ''
+
+    try {
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('id, name, phone')
+        .eq('twilio_number', to)
+        .single()
+
+      forwardTo = business?.phone || '+12037060504'
+      businessId = business?.id || null
+      console.log('[voice] business lookup:', { businessId, forwardTo })
+    } catch (bizErr) {
+      console.error('[voice] business lookup failed:', bizErr)
+    }
+
+    try {
+      const { data: lead } = await supabase
+        .from('leads')
+        .insert({ business_id: businessId, source: 'phone', status: 'new', phone: from })
+        .select()
+        .single()
+      leadId = lead?.id ?? ''
+      console.log('[voice] lead created:', leadId)
+    } catch (leadErr) {
+      console.error('[voice] lead insert failed:', leadErr)
+    }
+
+    try {
+      await supabase.from('calls').insert({
+        client_id: businessId,
+        transcript: JSON.stringify({ call_sid: callSid, from_number: from, to_number: to, direction: 'inbound', lead_id: leadId })
       })
-      .select()
-      .single()
+    } catch (callErr) {
+      console.error('[voice] call insert failed:', callErr)
+    }
 
-    // calls table only has: id, client_id, created_at, transcript
-    await supabase.from('calls').insert({
-      client_id: businessId,
-      transcript: JSON.stringify({ call_sid: callSid, from_number: from, to_number: to, direction: 'inbound', lead_id: lead?.id })
-    })
-
-    const leadId = lead?.id ?? ''
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial callerId="${to}" timeout="20"
@@ -49,22 +76,11 @@ export async function POST(req: NextRequest) {
   </Dial>
 </Response>`
 
-    return new NextResponse(twiml, {
-      status: 200,
-      headers: { 'Content-Type': 'text/xml' }
-    })
+    console.log('[voice] returning TwiML, forwarding to:', forwardTo)
+    return twimlResponse(twiml)
 
   } catch (err) {
-    console.error('Voice webhook error:', err)
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Dial callerId="+19789136892" timeout="20">
-    <Number>+12037060504</Number>
-  </Dial>
-</Response>`
-    return new NextResponse(twiml, {
-      status: 200,
-      headers: { 'Content-Type': 'text/xml' }
-    })
+    console.error('[voice] TOP-LEVEL CRASH — returning fallback TwiML:', err)
+    return twimlResponse(FALLBACK_TWIML)
   }
 }
