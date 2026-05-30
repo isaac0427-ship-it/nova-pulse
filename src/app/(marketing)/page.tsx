@@ -156,12 +156,7 @@ export default function MarketingPage() {
 
           {/* Right — animated grid + floating cards */}
           <div style={{ position: "relative", height: 480 }} className="hide-mobile">
-            <div style={{
-              position: "absolute", inset: 0,
-              backgroundImage: "radial-gradient(circle, rgba(198,161,91,0.18) 1px, transparent 1px)",
-              backgroundSize: "32px 32px",
-              animation: "gridMove 20s linear infinite",
-            }} />
+            <img src="/images/hero-globe.png" alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center" }} />
             <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 60% 40%, rgba(198,161,91,0.07) 0%, transparent 70%)" }} />
 
             <FloatCard delay={0} style={{ top: 40, left: 20 }}>
@@ -263,8 +258,9 @@ export default function MarketingPage() {
       </section>
 
       {/* ── SOLUTION ── */}
-      <section style={{ background: NAVY, padding: "120px 40px", borderTop: `1px solid ${BD}` }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <section style={{ backgroundImage: "url('/images/hero-grid.png')", backgroundSize: "cover", backgroundPosition: "center", position: "relative", padding: "120px 40px", borderTop: `1px solid ${BD}` }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", pointerEvents: "none" }} />
+        <div style={{ maxWidth: 1200, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <Reveal>
             <p style={{ fontFamily: INTER, fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: G, marginBottom: 12 }}>THE SOLUTION</p>
             <h2 style={{ fontFamily: BEBAS, fontSize: "clamp(48px, 6vw, 80px)", color: TXT, lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: 64 }}>
@@ -356,8 +352,9 @@ export default function MarketingPage() {
       </section>
 
       {/* ── PRICING ── */}
-      <section id="pricing" style={{ background: BG, padding: "120px 40px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <section id="pricing" style={{ backgroundImage: "url('/images/hero-grid.png')", backgroundSize: "cover", backgroundPosition: "center", position: "relative", padding: "120px 40px" }}>
+        <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", pointerEvents: "none" }} />
+        <div style={{ maxWidth: 1100, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <Reveal>
             <p style={{ fontFamily: INTER, fontSize: 11, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: G, marginBottom: 12 }}>INVESTMENT</p>
             <h2 style={{ fontFamily: BEBAS, fontSize: "clamp(48px, 6vw, 80px)", color: TXT, lineHeight: 0.95, letterSpacing: "0.02em", marginBottom: 80 }}>SIMPLE PRICING.</h2>

@@ -99,7 +99,9 @@ export default function LoginPage() {
       {/* LEFT PANEL */}
       <div style={{
         width: "55%",
-        background: NAVY,
+        backgroundImage: "url('/images/hero-grid.png')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         position: "relative",
         overflow: "hidden",
         display: "flex",
@@ -108,11 +110,10 @@ export default function LoginPage() {
       }}
         className="hide-mobile"
       >
-        {/* Dot grid pattern */}
+        {/* Dark overlay */}
         <div style={{
           position: "absolute", inset: 0,
-          backgroundImage: "radial-gradient(circle, rgba(198,161,91,0.13) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
+          background: "rgba(0,0,0,0.6)",
           pointerEvents: "none",
         }} />
 
